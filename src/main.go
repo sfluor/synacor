@@ -1,9 +1,10 @@
 package main
 
 import (
-	"os"
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 )
 
@@ -55,7 +56,7 @@ func main() {
 	}
 
 	// Initialize memory
-	reg := [8]uint16{0,0,0,0,0,0,0,0}
+	reg := [8]uint16{0, 0, 0, 0, 0, 0, 0, 0}
 	stack := []uint16{}
 	mem := parse(string(b))
 
@@ -67,6 +68,9 @@ func main() {
 func exec(mem mem, reg register, stack stack) {
 	// Our cursor that points to the actual position in the memory
 	cursor := uint16(0)
+
+	// Reader for opcode IN
+	reader := bufio.NewReader(os.Stdin)
 
 	for cursor < uint16(len(mem)) {
 		// Retrieve the operation
@@ -87,13 +91,13 @@ func exec(mem mem, reg register, stack stack) {
 			if len(stack) == 0 {
 				panic("EMPTY STACK")
 			} else {
-				reg[mem[cursor+1]-M] = stack[len(stack) -1]
+				reg[mem[cursor+1]-M] = stack[len(stack)-1]
 				stack = stack[:len(stack)-1]
 			}
 			cursor += 2
 
 		case EQ: // Code 4
-			if (g(mem[cursor+2], reg) == g(mem[cursor+3], reg)) {
+			if g(mem[cursor+2], reg) == g(mem[cursor+3], reg) {
 				reg[mem[cursor+1]-M] = 1
 			} else {
 				reg[mem[cursor+1]-M] = 0
@@ -101,7 +105,7 @@ func exec(mem mem, reg register, stack stack) {
 			cursor += 4
 
 		case GT: // Code 5
-			if (g(mem[cursor+2], reg) > g(mem[cursor+3], reg)) {
+			if g(mem[cursor+2], reg) > g(mem[cursor+3], reg) {
 				reg[mem[cursor+1]-M] = 1
 			} else {
 				reg[mem[cursor+1]-M] = 0
@@ -126,17 +130,16 @@ func exec(mem mem, reg register, stack stack) {
 			}
 
 		case ADD: // Code 9
-			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) + g(mem[cursor+3], reg))%M
+			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) + g(mem[cursor+3], reg)) % M
 			cursor += 4
 
 		case MULT: // Code 10
-			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) * g(mem[cursor+3], reg))%M
+			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) * g(mem[cursor+3], reg)) % M
 			cursor += 4
 
 		case MOD: // Code 11
 			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) % g(mem[cursor+3], reg))
 			cursor += 4
-
 
 		case AND: // Code 12
 			reg[mem[cursor+1]-M] = g(mem[cursor+2], reg) & g(mem[cursor+3], reg)
@@ -166,7 +169,7 @@ func exec(mem mem, reg register, stack stack) {
 			if len(stack) == 0 {
 				cursor = uint16(len(mem))
 			} else {
-				cursor = stack[len(stack) -1]
+				cursor = stack[len(stack)-1]
 				stack = stack[:len(stack)-1]
 			}
 
@@ -175,7 +178,9 @@ func exec(mem mem, reg register, stack stack) {
 			cursor += 2
 
 		case IN: // Code 20
-			// TODO
+			b, _ := reader.ReadByte()
+			reg[mem[cursor+1]-M] = uint16(b)
+			cursor += 2
 
 		case NOOP: // Code 21
 			cursor++
@@ -190,8 +195,8 @@ func exec(mem mem, reg register, stack stack) {
 func parse(input string) mem {
 	mem := []uint16{}
 
-	for i :=0;  i < len(input)-1 ; i += 2{
-		v, err := strconv.ParseUint(tob(input[i+1]) + tob(input[i]), 2, 16)
+	for i := 0; i < len(input)-1; i += 2 {
+		v, err := strconv.ParseUint(tob(input[i+1])+tob(input[i]), 2, 16)
 		if err != nil {
 			panic(err)
 		}
