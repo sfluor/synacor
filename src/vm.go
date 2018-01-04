@@ -42,6 +42,7 @@ type vm struct {
 	register [8]uint16
 	stack    []uint16
 	memory   []uint16
+	cursor   uint16
 }
 
 func main() {
@@ -67,103 +68,102 @@ func main() {
 // exec executes the binary code
 func (vm *vm) exec() {
 	// Our cursor that points to the actual position in the memory
-	cursor := uint16(0)
 
 	// Reader for opcode IN
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		// Retrieve the operation
-		op := vm.memory[cursor]
+		op := vm.memory[vm.cursor]
 		switch op {
 		case HALT: // Code 0
 			fmt.Print("Halt op code !")
 			os.Exit(0)
 
 		case SET: // Code 1
-			vm.set(cursor+1, vm.get(cursor+2))
-			cursor += 3
+			vm.set(vm.b())
+			vm.cursor += 3
 
 		case PUSH: // Code 2
-			vm.stack = append(vm.stack, vm.get(cursor+1))
-			cursor += 2
+			vm.stack = append(vm.stack, vm.a())
+			vm.cursor += 2
 
 		case POP: // Code 3
 			popped, err := vm.pop()
 			if err != nil {
 				panic(err)
 			}
-			vm.set(cursor+1, popped)
-			cursor += 2
+			vm.set(popped)
+			vm.cursor += 2
 
 		case EQ: // Code 4
-			if vm.get(cursor+2) == vm.get(cursor+3) {
-				vm.set(cursor+1, 1)
+			if vm.b() == vm.c() {
+				vm.set(1)
 			} else {
-				vm.set(cursor+1, 0)
+				vm.set(0)
 			}
-			cursor += 4
+			vm.cursor += 4
 
 		case GT: // Code 5
-			if vm.get(cursor+2) > vm.get(cursor+3) {
-				vm.set(cursor+1, 1)
+			if vm.b() > vm.c() {
+				vm.set(1)
 			} else {
-				vm.set(cursor+1, 0)
+				vm.set(0)
 			}
-			cursor += 4
+			vm.cursor += 4
 
 		case JMP: // Code 6
-			cursor = vm.get(cursor + 1)
+			vm.cursor = vm.a()
 
 		case JT: // Code 7
-			if vm.get(cursor+1) != 0 {
-				cursor = vm.get(cursor + 2)
+			if vm.a() != 0 {
+				vm.cursor = vm.b()
 			} else {
-				cursor += 3
+				vm.cursor += 3
 			}
 
 		case JF: // Code 8
-			if vm.get(cursor+1) == 0 {
-				cursor = vm.get(cursor + 2)
+			if vm.a() == 0 {
+				vm.cursor = vm.b()
 			} else {
-				cursor += 3
+				vm.cursor += 3
 			}
 
 		case ADD: // Code 9
-			vm.set(cursor+1, (vm.get(cursor+2)+vm.get(cursor+3))%M)
-			cursor += 4
+			vm.set((vm.b() + vm.c()) % M)
+			vm.cursor += 4
 
 		case MULT: // Code 10
-			vm.set(cursor+1, (vm.get(cursor+2)*vm.get(cursor+3))%M)
-			cursor += 4
+			vm.set((vm.b() * vm.c()) % M)
+			vm.cursor += 4
 
 		case MOD: // Code 11
-			vm.set(cursor+1, vm.get(cursor+2)%vm.get(cursor+3))
-			cursor += 4
+			vm.set(vm.b() % vm.c())
+			vm.cursor += 4
 
 		case AND: // Code 12
-			vm.set(cursor+1, vm.get(cursor+2)&vm.get(cursor+3))
-			cursor += 4
+			vm.set(vm.b() & vm.c())
+			vm.cursor += 4
 
 		case OR: // Code 13
-			vm.set(cursor+1, vm.get(cursor+2)|vm.get(cursor+3))
-			cursor += 4
+			vm.set(vm.b() | vm.c())
+			vm.cursor += 4
 
 		case NOT: // Code 14
-			vm.set(cursor+1, 0x7fff&^vm.get(cursor+2))
-			cursor += 3
+			vm.set(0x7fff &^ vm.b())
+			vm.cursor += 3
 
 		case RMEM: // Code 15
-			vm.set(cursor+1, vm.get(vm.get(cursor+2)))
-			cursor += 3
+			vm.set(vm.get(vm.b()))
+			vm.cursor += 3
 
 		case WMEM: // Code 16
-			vm.memory[vm.get(cursor+1)] = vm.get(cursor + 2)
-			cursor += 3
+			vm.memory[vm.a()] = vm.b()
+			vm.cursor += 3
 
 		case CALL: // Code 17
-			vm.push(cursor + 2)
-			cursor = vm.get(cursor + 1)
+			vm.push(vm.cursor + 2)
+			vm.cursor = vm.a()
 
 		case RET: // Code 18
 			popped, err := vm.pop()
@@ -172,19 +172,19 @@ func (vm *vm) exec() {
 				fmt.Print("RET operation resulted in halt !")
 				os.Exit(0)
 			}
-			cursor = popped
+			vm.cursor = popped
 
 		case OUT: // Code 19
-			fmt.Print(string(vm.get(cursor + 1)))
-			cursor += 2
+			fmt.Print(string(vm.a()))
+			vm.cursor += 2
 
 		case IN: // Code 20
 			b, _ := reader.ReadByte()
-			vm.set(cursor+1, uint16(b))
-			cursor += 2
+			vm.set(uint16(b))
+			vm.cursor += 2
 
 		case NOOP: // Code 21
-			cursor++
+			vm.cursor++
 
 		default:
 			panic(fmt.Errorf("Unrecognized opcode %v", op))
@@ -233,7 +233,9 @@ func (vm vm) get(addr uint16) uint16 {
 }
 
 // set Modify a value in the memory
-func (vm *vm) set(addr, value uint16) {
+func (vm *vm) set(value uint16) {
+	// We always use set in the first argument < a >
+	addr := vm.cursor + 1
 	m := vm.memory[addr]
 	if m > M+8 {
 		panic(fmt.Errorf("Set operation: Invalid address %v", m))
@@ -256,4 +258,19 @@ func (vm *vm) pop() (uint16, error) {
 		return res, nil
 	}
 	return 0, fmt.Errorf("empty stack ")
+}
+
+// a returns the first argument of the current command
+func (vm vm) a() uint16 {
+	return vm.get(vm.cursor + 1)
+}
+
+// b returns the second argument of the current command
+func (vm vm) b() uint16 {
+	return vm.get(vm.cursor + 2)
+}
+
+// c returns the first argument of the current command
+func (vm vm) c() uint16 {
+	return vm.get(vm.cursor + 3)
 }
