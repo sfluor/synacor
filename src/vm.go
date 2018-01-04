@@ -3,12 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 )
 
-// Mem size
+// M is the Mem size
 const M = 32768
 
 // Op codes
@@ -45,150 +44,125 @@ type vm struct {
 	cursor   uint16
 }
 
-func main() {
-
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Please give the input binary as parameter: %v challenge.bin", os.Args[0])
-		os.Exit(2)
-	}
-
-	// Read file
-	b, err := ioutil.ReadFile(os.Args[1])
-	if err != nil {
-		panic(err)
-	}
-
-	// Initialize VM
-	vm := &vm{memory: parse(string(b))}
-
-	// Execute
-	vm.exec()
-}
-
-// exec executes the binary code
-func (vm *vm) exec() {
+// execInstruction executes one instruction
+func (vm *vm) execInstruction(reader *bufio.Reader) {
 	// Our cursor that points to the actual position in the memory
 
-	// Reader for opcode IN
-	reader := bufio.NewReader(os.Stdin)
+	// Retrieve the operation
+	op := vm.memory[vm.cursor]
+	switch op {
+	case HALT: // Code 0
+		fmt.Print("Halt op code !")
+		os.Exit(0)
 
-	for {
-		// Retrieve the operation
-		op := vm.memory[vm.cursor]
-		switch op {
-		case HALT: // Code 0
-			fmt.Print("Halt op code !")
-			os.Exit(0)
+	case SET: // Code 1
+		vm.set(vm.b())
+		vm.cursor += 3
 
-		case SET: // Code 1
-			vm.set(vm.b())
-			vm.cursor += 3
+	case PUSH: // Code 2
+		vm.stack = append(vm.stack, vm.a())
+		vm.cursor += 2
 
-		case PUSH: // Code 2
-			vm.stack = append(vm.stack, vm.a())
-			vm.cursor += 2
-
-		case POP: // Code 3
-			popped, err := vm.pop()
-			if err != nil {
-				panic(err)
-			}
-			vm.set(popped)
-			vm.cursor += 2
-
-		case EQ: // Code 4
-			if vm.b() == vm.c() {
-				vm.set(1)
-			} else {
-				vm.set(0)
-			}
-			vm.cursor += 4
-
-		case GT: // Code 5
-			if vm.b() > vm.c() {
-				vm.set(1)
-			} else {
-				vm.set(0)
-			}
-			vm.cursor += 4
-
-		case JMP: // Code 6
-			vm.cursor = vm.a()
-
-		case JT: // Code 7
-			if vm.a() != 0 {
-				vm.cursor = vm.b()
-			} else {
-				vm.cursor += 3
-			}
-
-		case JF: // Code 8
-			if vm.a() == 0 {
-				vm.cursor = vm.b()
-			} else {
-				vm.cursor += 3
-			}
-
-		case ADD: // Code 9
-			vm.set((vm.b() + vm.c()) % M)
-			vm.cursor += 4
-
-		case MULT: // Code 10
-			vm.set((vm.b() * vm.c()) % M)
-			vm.cursor += 4
-
-		case MOD: // Code 11
-			vm.set(vm.b() % vm.c())
-			vm.cursor += 4
-
-		case AND: // Code 12
-			vm.set(vm.b() & vm.c())
-			vm.cursor += 4
-
-		case OR: // Code 13
-			vm.set(vm.b() | vm.c())
-			vm.cursor += 4
-
-		case NOT: // Code 14
-			vm.set(0x7fff &^ vm.b())
-			vm.cursor += 3
-
-		case RMEM: // Code 15
-			vm.set(vm.get(vm.b()))
-			vm.cursor += 3
-
-		case WMEM: // Code 16
-			vm.memory[vm.a()] = vm.b()
-			vm.cursor += 3
-
-		case CALL: // Code 17
-			vm.push(vm.cursor + 2)
-			vm.cursor = vm.a()
-
-		case RET: // Code 18
-			popped, err := vm.pop()
-			if err != nil {
-				// Halt
-				fmt.Print("RET operation resulted in halt !")
-				os.Exit(0)
-			}
-			vm.cursor = popped
-
-		case OUT: // Code 19
-			fmt.Print(string(vm.a()))
-			vm.cursor += 2
-
-		case IN: // Code 20
-			b, _ := reader.ReadByte()
-			vm.set(uint16(b))
-			vm.cursor += 2
-
-		case NOOP: // Code 21
-			vm.cursor++
-
-		default:
-			panic(fmt.Errorf("Unrecognized opcode %v", op))
+	case POP: // Code 3
+		popped, err := vm.pop()
+		if err != nil {
+			panic(err)
 		}
+		vm.set(popped)
+		vm.cursor += 2
+
+	case EQ: // Code 4
+		if vm.b() == vm.c() {
+			vm.set(1)
+		} else {
+			vm.set(0)
+		}
+		vm.cursor += 4
+
+	case GT: // Code 5
+		if vm.b() > vm.c() {
+			vm.set(1)
+		} else {
+			vm.set(0)
+		}
+		vm.cursor += 4
+
+	case JMP: // Code 6
+		vm.cursor = vm.a()
+
+	case JT: // Code 7
+		if vm.a() != 0 {
+			vm.cursor = vm.b()
+		} else {
+			vm.cursor += 3
+		}
+
+	case JF: // Code 8
+		if vm.a() == 0 {
+			vm.cursor = vm.b()
+		} else {
+			vm.cursor += 3
+		}
+
+	case ADD: // Code 9
+		vm.set((vm.b() + vm.c()) % M)
+		vm.cursor += 4
+
+	case MULT: // Code 10
+		vm.set((vm.b() * vm.c()) % M)
+		vm.cursor += 4
+
+	case MOD: // Code 11
+		vm.set(vm.b() % vm.c())
+		vm.cursor += 4
+
+	case AND: // Code 12
+		vm.set(vm.b() & vm.c())
+		vm.cursor += 4
+
+	case OR: // Code 13
+		vm.set(vm.b() | vm.c())
+		vm.cursor += 4
+
+	case NOT: // Code 14
+		vm.set(0x7fff &^ vm.b())
+		vm.cursor += 3
+
+	case RMEM: // Code 15
+		vm.set(vm.get(vm.b()))
+		vm.cursor += 3
+
+	case WMEM: // Code 16
+		vm.memory[vm.a()] = vm.b()
+		vm.cursor += 3
+
+	case CALL: // Code 17
+		vm.push(vm.cursor + 2)
+		vm.cursor = vm.a()
+
+	case RET: // Code 18
+		popped, err := vm.pop()
+		if err != nil {
+			// Halt
+			fmt.Print("RET operation resulted in halt !")
+			os.Exit(0)
+		}
+		vm.cursor = popped
+
+	case OUT: // Code 19
+		fmt.Print(string(vm.a()))
+		vm.cursor += 2
+
+	case IN: // Code 20
+		b, _ := reader.ReadByte()
+		vm.set(uint16(b))
+		vm.cursor += 2
+
+	case NOOP: // Code 21
+		vm.cursor++
+
+	default:
+		panic(fmt.Errorf("Unrecognized opcode %v", op))
 	}
 }
 
