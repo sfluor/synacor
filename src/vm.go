@@ -43,7 +43,7 @@ type stack []uint16
 type mem []uint16
 
 func main() {
-	// Check that file is submitted
+
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Please give the input binary as parameter: %v challenge.bin", os.Args[0])
 		os.Exit(2)
