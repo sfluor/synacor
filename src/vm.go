@@ -37,10 +37,12 @@ const (
 	NOOP
 )
 
-// Types
-type register [8]uint16
-type stack []uint16
-type mem []uint16
+// vm type
+type vm struct {
+	register [8]uint16
+	stack    []uint16
+	memory   []uint16
+}
 
 func main() {
 
@@ -55,131 +57,130 @@ func main() {
 		panic(err)
 	}
 
-	// Initialize memory
-	reg := [8]uint16{0, 0, 0, 0, 0, 0, 0, 0}
-	stack := []uint16{}
-	mem := parse(string(b))
+	// Initialize VM
+	vm := &vm{memory: parse(string(b))}
 
 	// Execute
-	exec(mem, reg, stack)
+	vm.exec()
 }
 
 // exec executes the binary code
-func exec(mem mem, reg register, stack stack) {
+func (vm *vm) exec() {
 	// Our cursor that points to the actual position in the memory
 	cursor := uint16(0)
 
 	// Reader for opcode IN
 	reader := bufio.NewReader(os.Stdin)
 
-	for cursor < uint16(len(mem)) {
+	for {
 		// Retrieve the operation
-		op := mem[cursor]
+		op := vm.memory[cursor]
 		switch op {
 		case HALT: // Code 0
-			cursor = uint16(len(mem))
+			fmt.Print("Halt op code !")
+			os.Exit(0)
 
 		case SET: // Code 1
-			reg[mem[cursor+1]-M] = g(mem[cursor+2], reg)
+			vm.set(cursor+1, vm.get(cursor+2))
 			cursor += 3
 
 		case PUSH: // Code 2
-			stack = append(stack, g(mem[cursor+1], reg))
+			vm.stack = append(vm.stack, vm.get(cursor+1))
 			cursor += 2
 
 		case POP: // Code 3
-			if len(stack) == 0 {
-				panic("EMPTY STACK")
-			} else {
-				reg[mem[cursor+1]-M] = stack[len(stack)-1]
-				stack = stack[:len(stack)-1]
+			popped, err := vm.pop()
+			if err != nil {
+				panic(err)
 			}
+			vm.set(cursor+1, popped)
 			cursor += 2
 
 		case EQ: // Code 4
-			if g(mem[cursor+2], reg) == g(mem[cursor+3], reg) {
-				reg[mem[cursor+1]-M] = 1
+			if vm.get(cursor+2) == vm.get(cursor+3) {
+				vm.set(cursor+1, 1)
 			} else {
-				reg[mem[cursor+1]-M] = 0
+				vm.set(cursor+1, 0)
 			}
 			cursor += 4
 
 		case GT: // Code 5
-			if g(mem[cursor+2], reg) > g(mem[cursor+3], reg) {
-				reg[mem[cursor+1]-M] = 1
+			if vm.get(cursor+2) > vm.get(cursor+3) {
+				vm.set(cursor+1, 1)
 			} else {
-				reg[mem[cursor+1]-M] = 0
+				vm.set(cursor+1, 0)
 			}
 			cursor += 4
 
 		case JMP: // Code 6
-			cursor = g(mem[cursor+1], reg)
+			cursor = vm.get(cursor + 1)
 
 		case JT: // Code 7
-			if g(mem[cursor+1], reg) != 0 {
-				cursor = g(mem[cursor+2], reg)
+			if vm.get(cursor+1) != 0 {
+				cursor = vm.get(cursor + 2)
 			} else {
 				cursor += 3
 			}
 
 		case JF: // Code 8
-			if g(mem[cursor+1], reg) == 0 {
-				cursor = g(mem[cursor+2], reg)
+			if vm.get(cursor+1) == 0 {
+				cursor = vm.get(cursor + 2)
 			} else {
 				cursor += 3
 			}
 
 		case ADD: // Code 9
-			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) + g(mem[cursor+3], reg)) % M
+			vm.set(cursor+1, (vm.get(cursor+2)+vm.get(cursor+3))%M)
 			cursor += 4
 
 		case MULT: // Code 10
-			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) * g(mem[cursor+3], reg)) % M
+			vm.set(cursor+1, (vm.get(cursor+2)*vm.get(cursor+3))%M)
 			cursor += 4
 
 		case MOD: // Code 11
-			reg[mem[cursor+1]-M] = (g(mem[cursor+2], reg) % g(mem[cursor+3], reg))
+			vm.set(cursor+1, vm.get(cursor+2)%vm.get(cursor+3))
 			cursor += 4
 
 		case AND: // Code 12
-			reg[mem[cursor+1]-M] = g(mem[cursor+2], reg) & g(mem[cursor+3], reg)
+			vm.set(cursor+1, vm.get(cursor+2)&vm.get(cursor+3))
 			cursor += 4
 
 		case OR: // Code 13
-			reg[mem[cursor+1]-M] = g(mem[cursor+2], reg) | g(mem[cursor+3], reg)
+			vm.set(cursor+1, vm.get(cursor+2)|vm.get(cursor+3))
 			cursor += 4
 
 		case NOT: // Code 14
-			reg[mem[cursor+1]-M] = 0x7fff &^ g(mem[cursor+2], reg)
+			vm.set(cursor+1, 0x7fff&^vm.get(cursor+2))
 			cursor += 3
 
 		case RMEM: // Code 15
-			reg[mem[cursor+1]-M] = mem[g(mem[cursor+2], reg)]
+			vm.set(cursor+1, vm.get(vm.get(cursor+2)))
 			cursor += 3
 
 		case WMEM: // Code 16
-			mem[g(mem[cursor+1], reg)] = g(mem[cursor+2], reg)
+			vm.memory[vm.get(cursor+1)] = vm.get(cursor + 2)
 			cursor += 3
 
 		case CALL: // Code 17
-			stack = append(stack, cursor+2)
-			cursor = g(mem[cursor+1], reg)
+			vm.push(cursor + 2)
+			cursor = vm.get(cursor + 1)
 
 		case RET: // Code 18
-			if len(stack) == 0 {
-				cursor = uint16(len(mem))
-			} else {
-				cursor = stack[len(stack)-1]
-				stack = stack[:len(stack)-1]
+			popped, err := vm.pop()
+			if err != nil {
+				// Halt
+				fmt.Print("RET operation resulted in halt !")
+				os.Exit(0)
 			}
+			cursor = popped
 
 		case OUT: // Code 19
-			fmt.Print(string(g(mem[cursor+1], reg)))
+			fmt.Print(string(vm.get(cursor + 1)))
 			cursor += 2
 
 		case IN: // Code 20
 			b, _ := reader.ReadByte()
-			reg[mem[cursor+1]-M] = uint16(b)
+			vm.set(cursor+1, uint16(b))
 			cursor += 2
 
 		case NOOP: // Code 21
@@ -192,7 +193,7 @@ func exec(mem mem, reg register, stack stack) {
 }
 
 // parse Parses the binary as a string and return the list of 16-bits values respecting little-endian convention
-func parse(input string) mem {
+func parse(input string) []uint16 {
 	mem := []uint16{}
 
 	for i := 0; i < len(input)-1; i += 2 {
@@ -216,16 +217,43 @@ func tob(c uint8) string {
 	return res
 }
 
-// g Retrieves a value by checking the register
-func g(nb uint16, reg register) uint16 {
-	if nb > 32776 {
-		panic(fmt.Errorf("Invalid number %v", nb))
+// get Retrieves a value by checking the register
+func (vm vm) get(addr uint16) uint16 {
+	m := vm.memory[addr]
+	if m > M+7 {
+		panic(fmt.Errorf("Get operation: Invalid address %v", m))
 	}
 
 	// Register
-	if nb >= M {
-		return reg[nb-M]
+	if m >= M {
+		return vm.register[m-M]
 	}
 
-	return nb
+	return m
+}
+
+// set Modify a value in the memory
+func (vm *vm) set(addr, value uint16) {
+	m := vm.memory[addr]
+	if m > M+8 {
+		panic(fmt.Errorf("Set operation: Invalid address %v", m))
+	}
+
+	// Set in register
+	vm.register[m-M] = value
+}
+
+// Push to stack
+func (vm *vm) push(value uint16) {
+	vm.stack = append(vm.stack, value)
+}
+
+// Pop from stack
+func (vm *vm) pop() (uint16, error) {
+	if len(vm.stack) > 0 {
+		res := vm.stack[len(vm.stack)-1]
+		vm.stack = vm.stack[:len(vm.stack)-1]
+		return res, nil
+	}
+	return 0, fmt.Errorf("empty stack ")
 }
