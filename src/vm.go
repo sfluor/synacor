@@ -155,9 +155,12 @@ func (vm *vm) execInstruction(reader *bufio.Reader) {
 
 	case IN: // Code 20
 		b, _ := reader.ReadByte()
-		vm.set(uint16(b))
-		vm.cursor += 2
-
+		if string(b) == "$" {
+			fmt.Println(vm.formatRegister())
+		} else {
+			vm.set(uint16(b))
+			vm.cursor += 2
+		}
 	case NOOP: // Code 21
 		vm.cursor++
 
