@@ -33,10 +33,15 @@ There is patterns in the memory address subsequent calls:
 `P6`: 6067 -> 6067 -> 6056 -> 6059 -> 6061 -> 6065
 
 After `P1` there is always `P1` or `P2`
+
 After `P2` there is always `P1` or `P3`
+
 After `P3` there is always `P5`
+
 After `P4` there is always `P1`
+
 After `P5` there is always `P4`, `P5` or `P6`
+
 After `P6` there is always `P1`
 
 It would be better if we had a file describing every instructions
@@ -214,3 +219,6 @@ R0 = (R0 + 32767)%32768
 stack <- 6067
 goto 6027
 ```
+
+---------
+
