@@ -92,11 +92,9 @@ for `P2` 6027 -> 6035 -> 6038 -> 6042 -> 6045
 
 it can be resumed to:
 ```
-while R0 != 0 {
-    R0 = (R0 + 32767)%32768
-    R1 = R7
-    stack <- 6047
-}
+R0 = (R0 + 32767)%32768
+R1 = R7
+stack <- 6047
 ```
 
 
@@ -186,10 +184,11 @@ So the P5 pattern do:
 
 it can be resumed to:
 ```
-if R0 == 1 {
+while R0 != 0 {
     stack.pop()
-    R1 = 1
-    R0 = 2
+    R1 = R0
+    stack.pop()
+    R0 = R1 + 1
 }
 ```
 
