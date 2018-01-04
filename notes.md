@@ -222,3 +222,16 @@ goto 6027
 
 ---------
 
+So if we sum up:
+
+We have `P1` until `R1` == 0 (it pushes `R0 != 0` and 6056 to te stack plenty of times)
+
+Then we have `P2`, that adds 32767 to `R0`, sets `R1` to `R7` and push 6047 to the stack
+
+Then If `R0` is zero we have `P3` else we have `P1` that sets `R1` to 0 again, this (`n*P1 + P2`) repeats until we have `R0 == 0` (we then have `R0 == 0` and `R1 == R7 == 0 `)
+
+Then in `P3` `R1 = 1` and `R0 = 2` (popping the stack twice) then we have `P5`
+
+In `P5` we pop the stack multiple times until `R0 == 0` and `R1 = R0 - 1 == 32767`
+
+Then he have `P4` or `P6` but they have the same behaviour: two stack.pop(), set `R1` to 0, stack.pop() into `R0` and adds 32767 to `R0` then we go back to `P1`
