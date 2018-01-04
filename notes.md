@@ -14,4 +14,8 @@ The strange book content says that we should try to modify the last register val
 
 To do so, it's advised to extract the confirmation algorithm. Indeed the last register value needs to be confirmed by a computationally expensive algorithm.
 
-Implementation of a logger to see the registers values.
+Implementation of a logger to see the registers values (not so relevant)
+
+Implementation of a new command "$" that can debug by printing the current register state. By forcing the R7 register to take a non zero value here we can trigger the confirmation process. We can notice that it calls the following memory addresses "6067 6056 6059 6061 6065 6027 6030 6034"
+
+It would be better if we had a file describing every instructions
