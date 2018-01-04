@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-func printSolution() {
+// PrintSolution prints the solution for the coin enigma
+func PrintSolution() {
 	result := 399
 
 	coins := map[int]string{

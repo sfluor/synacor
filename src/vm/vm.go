@@ -1,10 +1,10 @@
-package main
+// Package vm that describes the behavior of the VM
+package vm
 
 import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 )
 
 // M is the Mem size
@@ -36,20 +36,49 @@ const (
 	NOOP
 )
 
-// vm type
-type vm struct {
+// VM type
+type VM struct {
 	register [8]uint16
 	stack    []uint16
 	memory   []uint16
 	cursor   uint16
 }
 
+// New creates a VM instance
+func New(memory []uint16) *VM {
+	return &VM{
+		memory: memory,
+	}
+}
+
+// Run executes the code in memory
+func (vm *VM) Run() {
+	// Reader for standard input
+	stdinReader := bufio.NewReader(os.Stdin)
+
+	// Log file
+	// file, err := os.Create("./vm.log")
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// Execute the binary
+	for {
+		vm.execInstruction(stdinReader)
+		// vm.log(file)
+	}
+}
+
 // execInstruction executes one instruction
-func (vm *vm) execInstruction(reader *bufio.Reader) {
+func (vm *VM) execInstruction(reader *bufio.Reader) {
 	// Our cursor that points to the actual position in the memory
 
 	// Retrieve the operation
 	op := vm.memory[vm.cursor]
+
+	// To see what opcodes are called during the confirmation process
+	// fmt.Print(" ", vm.cursor)
+
 	switch op {
 	case HALT: // Code 0
 		fmt.Print("Halt op code !")
@@ -157,6 +186,8 @@ func (vm *vm) execInstruction(reader *bufio.Reader) {
 		b, _ := reader.ReadByte()
 		if string(b) == "$" {
 			fmt.Println(vm.formatRegister())
+			// Force a non zero value for R7
+			// vm.register[7] = 7
 		} else {
 			vm.set(uint16(b))
 			vm.cursor += 2
@@ -169,33 +200,8 @@ func (vm *vm) execInstruction(reader *bufio.Reader) {
 	}
 }
 
-// parse Parses the binary as a string and return the list of 16-bits values respecting little-endian convention
-func parse(input string) []uint16 {
-	mem := []uint16{}
-
-	for i := 0; i < len(input)-1; i += 2 {
-		v, err := strconv.ParseUint(tob(input[i+1])+tob(input[i]), 2, 16)
-		if err != nil {
-			panic(err)
-		}
-
-		mem = append(mem, uint16(v))
-	}
-	return mem
-}
-
-// tob Converts to byte representation of size 8
-func tob(c uint8) string {
-	res := fmt.Sprintf("%b", c)
-	s := len(res)
-	for i := 0; i < 8-s; i++ {
-		res = "0" + res
-	}
-	return res
-}
-
 // get Retrieves a value by checking the register
-func (vm vm) get(addr uint16) uint16 {
+func (vm VM) get(addr uint16) uint16 {
 	m := vm.memory[addr]
 	if m > M+7 {
 		panic(fmt.Errorf("Get operation: Invalid address %v", m))
@@ -210,7 +216,7 @@ func (vm vm) get(addr uint16) uint16 {
 }
 
 // set Modify a value in the memory
-func (vm *vm) set(value uint16) {
+func (vm *VM) set(value uint16) {
 	// We always use set in the first argument < a >
 	addr := vm.cursor + 1
 	m := vm.memory[addr]
@@ -223,12 +229,12 @@ func (vm *vm) set(value uint16) {
 }
 
 // Push to stack
-func (vm *vm) push(value uint16) {
+func (vm *VM) push(value uint16) {
 	vm.stack = append(vm.stack, value)
 }
 
 // Pop from stack
-func (vm *vm) pop() (uint16, error) {
+func (vm *VM) pop() (uint16, error) {
 	if len(vm.stack) > 0 {
 		res := vm.stack[len(vm.stack)-1]
 		vm.stack = vm.stack[:len(vm.stack)-1]
@@ -238,16 +244,16 @@ func (vm *vm) pop() (uint16, error) {
 }
 
 // a returns the first argument of the current command
-func (vm vm) a() uint16 {
+func (vm VM) a() uint16 {
 	return vm.get(vm.cursor + 1)
 }
 
 // b returns the second argument of the current command
-func (vm vm) b() uint16 {
+func (vm VM) b() uint16 {
 	return vm.get(vm.cursor + 2)
 }
 
 // c returns the first argument of the current command
-func (vm vm) c() uint16 {
+func (vm VM) c() uint16 {
 	return vm.get(vm.cursor + 3)
 }

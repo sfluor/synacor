@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"./extractor"
 )
 
 func main() {
@@ -14,32 +15,32 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Coins solution
+	// coins.printSolution()
+
 	// Read file
 	b, err := ioutil.ReadFile(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
 
+	bin := extractor.Parse(string(b))
+
+	// Extract code
+	extractCode(bin)
+
 	// Initialize VM
-	vm := &vm{memory: parse(string(b))}
+	// vm := vm.New(bin)
 
 	// Run
-	vm.run()
+	// vm.Run()
 }
 
-func (vm *vm) run() {
-	// Reader for standard input
-	stdinReader := bufio.NewReader(os.Stdin)
-
-	// Log file
-	// file, err := os.Create("./vm.log")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// Execute the binary
-	for {
-		vm.execInstruction(stdinReader)
-		// vm.log(file)
+func extractCode(bin []uint16) {
+	f, err := os.Create("challenge.extracted")
+	if err != nil {
+		panic(err)
 	}
+	defer f.Close()
+	extractor.WriteExtractedCode(bin, f)
 }

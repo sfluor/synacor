@@ -1,11 +1,11 @@
-package main
+package vm
 
 import "fmt"
 import "io"
 import "log"
 
 // formatRegister returns a string reprensentation of the current state of the register
-func (vm vm) formatRegister() string {
+func (vm VM) formatRegister() string {
 	res := ""
 	for i, v := range vm.register {
 		res += fmt.Sprintf("R%d: %6d | ", i+1, v)
@@ -17,7 +17,7 @@ func (vm vm) formatRegister() string {
 }
 
 // log writes the state of the vm in a writer
-func (vm vm) log(w io.Writer) {
+func (vm VM) log(w io.Writer) {
 
 	_, err := w.Write([]byte(vm.formatRegister()))
 
