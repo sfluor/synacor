@@ -1,4 +1,4 @@
-package main
+package coins
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func main() {
+func printSolution() {
 	result := 399
 
 	coins := map[int]string{
