@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // M is the Mem size
@@ -42,6 +43,7 @@ type VM struct {
 	stack    []uint16
 	memory   []uint16
 	cursor   uint16
+	debug    bool
 }
 
 // New creates a VM instance
@@ -77,7 +79,10 @@ func (vm *VM) execInstruction(reader *bufio.Reader) {
 	op := vm.memory[vm.cursor]
 
 	// To see what opcodes are called during the confirmation process
-	// if vm.cursor > 5500 && vm.cursor < 7000 {
+	if vm.debug && op != OUT {
+		fmt.Printf("\n - Stack: %v\n - Register: %v\n - (%6d) %2d \n", vm.stack, vm.register, vm.cursor, op)
+	}
+	// if op != OUT {
 	// 	fmt.Println(vm.cursor, vm.register)
 	// }
 
@@ -188,12 +193,39 @@ func (vm *VM) execInstruction(reader *bufio.Reader) {
 		vm.cursor += 2
 
 	case IN: // Code 20
-		b, _ := reader.ReadByte()
-		if string(b) == "$" {
-			fmt.Println(vm.formatRegister())
-			// Force a non zero value for R7
-			vm.register[7] = 7
+		// Check if we are doing a command
+		t, _ := reader.Peek(1)
+		if string(t[0]) == "$" {
+			// It's a command
+			cmd, _, _ := reader.ReadLine()
+
+			if strings.Contains(string(cmd), "register") {
+				fmt.Println("Register: ", vm.formatRegister())
+			}
+
+			if strings.Contains(string(cmd), "stack") {
+				fmt.Println("Stack: ", vm.formatStack())
+			}
+
+			if strings.Contains(string(cmd), "cursor") {
+				fmt.Println("Cursor: ", vm.cursor)
+			}
+
+			if strings.Contains(string(cmd), "setreg7") {
+				// Force a non zero value for R7
+				vm.register[7] = 2
+			}
+
+			if strings.Contains(string(cmd), "debugon") {
+				vm.debug = true
+			}
+
+			if strings.Contains(string(cmd), "debugoff") {
+				vm.debug = false
+			}
+
 		} else {
+			b, _ := reader.ReadByte()
 			vm.set(uint16(b))
 			vm.cursor += 2
 		}

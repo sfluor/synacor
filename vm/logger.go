@@ -11,9 +11,12 @@ func (vm VM) formatRegister() string {
 		res += fmt.Sprintf("R%d: %6d | ", i+1, v)
 	}
 
-	res += "\n"
-
 	return res
+}
+
+// formatStack returns a string representation of the current stack
+func (vm VM) formatStack() string {
+	return fmt.Sprintf("%v", vm.stack)
 }
 
 // log writes the state of the vm in a writer
