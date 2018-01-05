@@ -77,7 +77,12 @@ func (vm *VM) execInstruction(reader *bufio.Reader) {
 	op := vm.memory[vm.cursor]
 
 	// To see what opcodes are called during the confirmation process
-	// fmt.Print(" ", vm.cursor)
+	// if vm.cursor > 5500 && vm.cursor < 7000 {
+	// 	fmt.Println(vm.cursor, vm.register)
+	// }
+
+	// To print the stack
+	// fmt.Println(vm.stack)
 
 	switch op {
 	case HALT: // Code 0
@@ -187,7 +192,7 @@ func (vm *VM) execInstruction(reader *bufio.Reader) {
 		if string(b) == "$" {
 			fmt.Println(vm.formatRegister())
 			// Force a non zero value for R7
-			// vm.register[7] = 7
+			vm.register[7] = 7
 		} else {
 			vm.set(uint16(b))
 			vm.cursor += 2

@@ -5,7 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"./extractor"
+	"synacor/vm"
+	"synacor/extractor"
 )
 
 func main() {
@@ -27,13 +28,13 @@ func main() {
 	bin := extractor.Parse(string(b))
 
 	// Extract code
-	extractCode(bin)
+	// extractCode(bin)
 
 	// Initialize VM
-	// vm := vm.New(bin)
+	vm := vm.New(bin)
 
 	// Run
-	// vm.Run()
+	vm.Run()
 }
 
 func extractCode(bin []uint16) {
