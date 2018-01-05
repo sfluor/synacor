@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 )
 
 // M is the Mem size
@@ -39,11 +38,12 @@ const (
 
 // VM type
 type VM struct {
-	register [8]uint16
-	stack    []uint16
-	memory   []uint16
-	cursor   uint16
-	debug    bool
+	register  [8]uint16
+	stack     []uint16
+	memory    []uint16
+	cursor    uint16
+	debugging bool
+	stepping  bool
 }
 
 // New creates a VM instance
@@ -58,16 +58,17 @@ func (vm *VM) Run() {
 	// Reader for standard input
 	stdinReader := bufio.NewReader(os.Stdin)
 
-	// Log file
-	// file, err := os.Create("./vm.log")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
 	// Execute the binary
 	for {
-		vm.execInstruction(stdinReader)
-		// vm.log(file)
+		if vm.stepping {
+			fmt.Print(">>> ")
+			cmd, _, _ := stdinReader.ReadLine()
+			if vm.debug(string(cmd)) {
+				vm.execInstruction(stdinReader)
+			}
+		} else {
+			vm.execInstruction(stdinReader)
+		}
 	}
 }
 
@@ -79,15 +80,9 @@ func (vm *VM) execInstruction(reader *bufio.Reader) {
 	op := vm.memory[vm.cursor]
 
 	// To see what opcodes are called during the confirmation process
-	if vm.debug && op != OUT {
-		fmt.Printf("\n - Stack: %v\n - Register: %v\n - (%6d) %2d \n", vm.stack, vm.register, vm.cursor, op)
+	if vm.debugging && op != OUT {
+		vm.printDebug(fmt.Sprintf("\n - Stack: %v\n - Register: %v\n - (%6d) %2d \n", vm.stack, vm.register, vm.cursor, op))
 	}
-	// if op != OUT {
-	// 	fmt.Println(vm.cursor, vm.register)
-	// }
-
-	// To print the stack
-	// fmt.Println(vm.stack)
 
 	switch op {
 	case HALT: // Code 0
@@ -199,30 +194,7 @@ func (vm *VM) execInstruction(reader *bufio.Reader) {
 			// It's a command
 			cmd, _, _ := reader.ReadLine()
 
-			if strings.Contains(string(cmd), "register") {
-				fmt.Println("Register: ", vm.formatRegister())
-			}
-
-			if strings.Contains(string(cmd), "stack") {
-				fmt.Println("Stack: ", vm.formatStack())
-			}
-
-			if strings.Contains(string(cmd), "cursor") {
-				fmt.Println("Cursor: ", vm.cursor)
-			}
-
-			if strings.Contains(string(cmd), "setreg7") {
-				// Force a non zero value for R7
-				vm.register[7] = 2
-			}
-
-			if strings.Contains(string(cmd), "debugon") {
-				vm.debug = true
-			}
-
-			if strings.Contains(string(cmd), "debugoff") {
-				vm.debug = false
-			}
+			vm.debug(string(cmd))
 
 		} else {
 			b, _ := reader.ReadByte()

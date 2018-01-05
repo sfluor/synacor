@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"synacor/vm"
 	"synacor/extractor"
+	"synacor/vm"
 )
 
 func main() {
