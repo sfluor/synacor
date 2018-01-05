@@ -38,12 +38,12 @@ const (
 
 // VM type
 type VM struct {
-	register  [8]uint16
-	stack     []uint16
-	memory    []uint16
-	cursor    uint16
-	debugging bool
-	stepping  bool
+	register  [8]uint16 // the VM register
+	stack     []uint16  // The VM stack
+	memory    []uint16  // The memory read from the file challenge.bin
+	cursor    uint16    // The current position in the memory
+	debugging bool      // Debug mode
+	stepping  bool      // Step by step mode
 }
 
 // New creates a VM instance
