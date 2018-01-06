@@ -18,7 +18,9 @@ Implementation of a logger to see the registers values (not so relevant)
 
 Implementation of a new command "$" that can debug by printing the current register state. By forcing the R7 register to take a non zero value here we can trigger the confirmation process. 
 
-There is patterns in the memory address subsequent calls:
+There are patterns in the memory address subsequent calls:
+
+`P0`: 5472 -> 5474 -> 5476 -> 5478 -> 5479 -> 5480 -> 5481 -> 5482 -> 5483 -> 5486 -> 5489
 
 `P1`: 6027 -> 6035 -> 6048 -> 6050 -> 6054
 
@@ -31,6 +33,8 @@ There is patterns in the memory address subsequent calls:
 `P5` 6067 -> 6056 -> 6059 -> 6061 -> 6065 -> 6027 -> 6030 -> 6034
 
 `P6`: 6067 -> 6067 -> 6056 -> 6059 -> 6061 -> 6065
+
+`P0` seems to happen only one time at the very beginning then we have `P1`
 
 After `P1` there is always `P1` or `P2`
 
@@ -47,6 +51,33 @@ After `P6` there is always `P1`
 It would be better if we had a file describing every instructions
 
 With the extractor package we extract this "assembly" code (it have been ordered by occurence)
+
+for `P0` `P0`: 5472 -> 5474 -> 5476 -> 5478 -> 5479 -> 5480 -> 5481 -> 5482 -> 5483 -> 5486 -> 5489
+
+```
+(  5472) |  pop: [R2]
+(  5474) |  pop: [R1]
+(  5476) |  pop: [R0]
+(  5478) | noop: []
+(  5479) | noop: []
+(  5480) | noop: []
+(  5481) | noop: []
+(  5482) | noop: []
+(  5483) |  set: [R0 4]
+(  5486) |  set: [R1 1]
+(  5489) | call: [6027]
+```
+
+Which does:
+
+```
+R2 = stack.pop()
+stack.pop()
+stack.pop()
+R0 = 4
+R1 = 1
+goto 6027
+```
 
 for `P1` 6027 -> 6035 -> 6048 -> 6050 -> 6054
 ```
@@ -236,114 +267,162 @@ In `P5` we pop the stack multiple times until `R0 == 0` and `R1 = R0 - 1 == 3276
 
 Then he have `P4` or `P6` but they have the same behaviour: two stack.pop(), set `R1` to 0, stack.pop() into `R0` and adds 32767 to `R0` then we go back to `P1`
 
+---------
+Let's try to have a more global look on theses patterns (they are all between 6027 and 6067):
+
+```
+(  6027) |   jt: [R0 6035]
+(  6030) |  add: [R0 R1 1]
+(  6034) |  ret: []
+(  6035) |   jt: [R1 6048]
+(  6038) |  add: [R0 R0 32767]
+(  6042) |  set: [R1 R7]
+(  6045) | call: [6027]
+(  6047) |  ret: []
+(  6048) | push: [R0]
+(  6050) |  add: [R1 R1 32767]
+(  6054) | call: [6027]
+(  6056) |  set: [R1 R0]
+(  6059) |  pop: [R0]
+(  6061) |  add: [R0 R0 32767]
+(  6065) | call: [6027]
+(  6067) |  ret: []
+```
+
+Can be transformed to:
+
+```
+    // P1 block
+    if R0 == 0 {
+        R0 = R1 + 1
+        goto stack.pop()
+    }
+    // P2 block
+    if R1 == 0 {
+        R0 = R0 - 1
+        R1 = R7
+        goto 6027
+        goto stack.pop()
+    }
+
+    stack.push(R0)
+    R1 = R1 - 1
+    goto 6027
+    R1 = R0
+    R0 = stack.pop()
+    R0 = R0 - 1
+    goto 6027
+    goto stack.pop()
+```
+
+The strange book speaks of a "confirmation algorithm", if we assume this algorithm can be described as a function and that we consider `R0`, `R1` and `R7` as global variables we can rewrite the previous set of instructions like the following (all operations are implicitly modulo 32768):
+
+```go
+func f() {
+    if R0 == 0 {
+        // If R0 is zero set it to R1 + 1
+        R0 = R1 + 1
+        return
+    } else if R1 == 0 {
+        // If R1 is zero call the function on (R0 - 1, R7, R7)
+        R0 = R0 - 1
+        R1 = R7
+        f()
+        return
+    } else {
+        // Else save R0
+        // Set R1' to the resulting R0' of the function on (R0, R1 - 1, R7)
+        // Retrieve the old R0 (before applying the function) thanks to the stack
+        // Call the function on (R0 - 1, R1', R7)
+        R1 = R1 - 1
+        f()
+        R1 = R0
+        R0 = stack.pop()
+        R0 = R0 - 1
+        f()
+        return        
+    }
+}
+```
+
+And we can see that in fact the patterns described before are only parts of this function that is recursively called with the `call: [6027]` instructions, and that this algorithm is computationally expensive beceause of recursions
+
 --------
 
-If we know look at what happens between the `use teleporter` command and the first pattern for the "confirmation", we have:
+If we know look at what happens between the `use teleporter` command and the first pattern (`P0`) for the "confirmation", we have:
 
 ```
-5921
-5923
-5925
-5928
-5931
-5934
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5989
-5964
-5966
-5969
-5973
-5976
-5978
-5980
-5983
-5986
-5989
-5936
-5940
-5943
-5947
-5951
-5954
-5959
-5961
-5963
+# R7 check
+
+5451 [2708 5445 3 10 101 0 0 7]   <-- R7 check
+5454 [2708 5445 3 10 101 0 0 7]
+5456 [2708 5445 3 10 101 0 0 7]
+5458 [2708 5445 3 10 101 0 0 7]
+5460 [2708 5445 3 10 101 0 0 7]
+5463 [28844 5445 3 10 101 0 0 7]
+5466 [28844 1531 3 10 101 0 0 7]
+5470 [28844 1531 30326 10 101 0 0 7]
+1458 [28844 1531 30326 10 101 0 0 7]
+1460 [28844 1531 30326 10 101 0 0 7]
+1462 [28844 1531 30326 10 101 0 0 7]
+1464 [28844 1531 30326 10 101 0 0 7]
+1466 [28844 1531 30326 10 101 0 0 7]
+1468 [28844 1531 30326 10 101 0 0 7]
+1471 [28844 1531 30326 10 101 0 28844 7]
+1474 [28844 1531 30326 10 101 1531 28844 7]
+1477 [28844 1531 30326 10 169 1531 28844 7]
+1480 [28844 0 30326 10 169 1531 28844 7]
+1484 [28844 0 30326 1 169 1531 28844 7]
+1488 [0 0 30326 1 169 1531 28844 7]
+1491 [0 0 30326 1 169 1531 28844 7]
+1495 [0 0 30326 28845 169 1531 28844 7]
+1498 [30263 0 30326 28845 169 1531 28844 7]
+1531 [30263 0 30326 28845 169 1531 28844 7]
+1533 [30263 0 30326 28845 169 1531 28844 7]
+1536 [30263 30326 30326 28845 169 1531 28844 7]
+2125 [30263 30326 30326 28845 169 1531 28844 7]
+2127 [30263 30326 30326 28845 169 1531 28844 7]
+2129 [30263 30326 30326 28845 169 1531 28844 7]
+2133 [30263 30326 30262 28845 169 1531 28844 7]
+2136 [30263 30326 2505 28845 169 1531 28844 7]
+2140 [30327 30326 2505 28845 169 1531 28844 7]
+2144 [65 30326 2505 28845 169 1531 28844 7]
+2146 [65 30326 30326 28845 169 1531 28844 7]
+2148 [65 30326 30326 28845 169 1531 28844 7]
+
+Print  A strange.... years."
+
+1540 [10 30326 30326 29013 169 1531 28844 7]
+1542 [10 168 30326 29013 169 1531 28844 7]
+1500 [10 168 30326 29013 169 1531 28844 7]
+1504 [10 169 30326 29013 169 1531 28844 7]
+1480 [10 169 30326 29013 169 1531 28844 7]
+1484 [10 169 30326 170 169 1531 28844 7]
+1488 [1 169 30326 170 169 1531 28844 7]
+1507 [1 169 30326 170 169 1531 28844 7]
+1509 [1 169 30326 170 169 1531 0 7]
+1511 [1 169 30326 170 169 0 0 7]
+1513 [1 169 30326 170 101 0 0 7]
+1515 [1 169 30326 10 101 0 0 7]
+1517 [28844 169 30326 10 101 0 0 7]
+5472 [28844 169 30326 10 101 0 0 7]
+5474 [28844 169 3 10 101 0 0 7]
+5476 [28844 5445 3 10 101 0 0 7]
+5478 [2708 5445 3 10 101 0 0 7]
+5479 [2708 5445 3 10 101 0 0 7]
+5480 [2708 5445 3 10 101 0 0 7]
+5481 [2708 5445 3 10 101 0 0 7]
+5482 [2708 5445 3 10 101 0 0 7]
+5483 [2708 5445 3 10 101 0 0 7]
+5486 [4 5445 3 10 101 0 0 7]
+5489 [4 1 3 10 101 0 0 7]
+
+Beginning of P0
+
+6027 [4 1 3 10 101 0 0 7]
+6035 [4 1 3 10 101 0 0 7]
+6048 [4 1 3 10 101 0 0 7]
+6050 [4 1 3 10 101 0 0 7]
 ```
+
+We can notice that the entry values for the function are (4, 1 and R7), here R7 is set to 7 thanks to the debugging commands.
