@@ -6,7 +6,7 @@ import (
 	"io"
 	"strconv"
 
-	"synacor/vm"
+	"github.com/sfluor/synacor/vm"
 )
 
 // op type

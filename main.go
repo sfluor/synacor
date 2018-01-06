@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"synacor/extractor"
-	"synacor/vm"
+	"github.com/sfluor/synacor/extractor"
+	"github.com/sfluor/synacor/vm"
 )
 
 func main() {
