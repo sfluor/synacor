@@ -21,11 +21,11 @@ func (vm *VM) debug(cmd string) bool {
 		vm.printDebug("Cursor: " + fmt.Sprintf("%d", vm.cursor) + "\n")
 	}
 
-	r := regexp.MustCompile(`^\$setreg R([1-8]) (0|[1-9][0-9]*)`)
+	setRegRegex := regexp.MustCompile(`^\$setreg R([1-8]) (0|[1-9][0-9]*)`)
 
 	// Force a non zero value for R7
 	if strings.Contains(cmd, "setreg") {
-		match := r.FindStringSubmatch(cmd)
+		match := setRegRegex.FindStringSubmatch(cmd)
 		// Wrong command
 		if len(match) < 3 {
 			vm.printError("Wrong command ! Should be $setreg R<n> <value>\n")
