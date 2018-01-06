@@ -334,6 +334,7 @@ func f() {
         // Set R1' to the resulting R0' of the function on (R0, R1 - 1, R7)
         // Retrieve the old R0 (before applying the function) thanks to the stack
         // Call the function on (R0 - 1, R1', R7)
+        stack.push(0)
         R1 = R1 - 1
         f()
         R1 = R0
