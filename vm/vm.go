@@ -76,6 +76,12 @@ func (vm *VM) Run() {
 func (vm *VM) execInstruction(reader *bufio.Reader) {
 	// Our cursor that points to the actual position in the memory
 
+	// Skip the verification process
+	if vm.cursor == 5489 {
+		vm.cursor = 5491
+		vm.register[0] = 6
+	}
+
 	// Retrieve the operation
 	op := vm.memory[vm.cursor]
 

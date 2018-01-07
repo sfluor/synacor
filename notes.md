@@ -508,3 +508,12 @@ func CachedConfirmation(R0, R1, R7 uint16) uint16 {
 This way the function is way more faster than before, we can even take advantage of goroutines to spawn multiple searchers at a time. A searcher is implemented in the confirmation file under vm directory.
 
 With 4 workers it took 8mn for my laptop to find a solution: `R7=25734`
+
+I just tried to bypass the teleport without setting R7 to the correct value it works but the code we get is not valid. But with the correct value of R7 it works yay !
+
+So let's add this to our moves.record:
+
+```
+$setreg R8 25734
+use teleporter
+```

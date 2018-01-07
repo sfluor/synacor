@@ -73,4 +73,5 @@ take teleporter
 use teleporter
 take business card
 take strange book
-
+$setreg R8 25734
+use teleporter
