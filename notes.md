@@ -447,4 +447,64 @@ The next instructions are:
 
 We check that R0 value is 6 and if it is we set R1 to 1 which permits us to go to instruction 5579.
 
-So maybe a right value for R7 would be a value that gives R0 = 6 at the end of the confirmation function. However we would need to bruteforce every possible value of R7.
+So maybe a right value for R7 would be a value that gives R0 = 6 at the end of the confirmation function. However we would need to bruteforce every possible value of R7. Let's try to optimize the confirmation function.
+
+Let's try to rewrite it in a smaller way:
+
+```go
+func confirmation(R0, R1, R7 uint16) uint16 {
+	if R0 == 0 {
+
+		return R1 + 1
+	} else if R1 == 0 {
+
+		return confirmation(R0-1, R7, R7)
+	} else {
+		tempR1 := confirmation(R0, R1-1, R7)
+
+		return confirmation(R0-1, tempR1, R7)
+	}
+}
+
+```
+
+Let's try to apply memoizing :
+
+```go
+// cache, we will store keys as "R0-R1-R7"
+var confirmationCache map[string]uint16
+
+func CachedConfirmation(R0, R1, R7 uint16) uint16 {
+
+	formattedInput := fmt.Sprintf("%d-%d-%d", R0, R1, R7)
+
+	// If already cached return it
+	if v, cached := confirmationCache[formattedInput]; cached {
+		return v
+	}
+
+	// Otherwise compute it and cache it
+	var cR0 uint16
+
+	if R0 == 0 {
+
+		cR0 = (R1 + 1) % M
+	} else if R1 == 0 {
+
+		cR0 = CachedConfirmation((R0-1)%M, R7, R7)
+	} else {
+		tempR1 := CachedConfirmation(R0, (R1-1)%M, R7)
+
+		cR0 = CachedConfirmation((R0-1)%M, tempR1, R7)
+	}
+
+	confirmationCache[formattedInput] = cR0
+
+	return cR0
+}
+
+```
+
+This way the function is way more faster than before, we can even take advantage of goroutines to spawn multiple searchers at a time. A searcher is implemented in the confirmation file under vm directory.
+
+With 4 workers it took 8mn for my laptop to find a solution: `R7=25734`
