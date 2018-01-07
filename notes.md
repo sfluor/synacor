@@ -533,9 +533,9 @@ After collecting everything it looks like this:
 ```
 I think it does arithmetical operations and return the result in the orb.
 
-When we walk on a "+" it says the orb gets green
-When we walk on a "-" it says the orb gets red
-When we walk on a "*" it says the orb gets yellow
+- When we walk on a "+" it says the orb gets green
+- When we walk on a "-" it says the orb gets red
+- When we walk on a "*" it says the orb gets yellow
 
 So we could think green is to prepare an addition with the next room, red a substraction and * a multiplication.
 
