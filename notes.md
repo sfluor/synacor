@@ -517,3 +517,15 @@ So let's add this to our moves.record:
 $setreg R8 25734
 use teleporter
 ```
+
+
+## Code 8
+
+We find a journal on the beach that give us advices on an enigma about rooms and a shortest path. Each room has a symbol on it's floor. 
+After collecting everything it looks like this:
+
+|   *   |   8   |   -   |   1   |30 Door
+|   4   |   *   |   11  |   *   |
+|   +   |   4   |   -   |   18  | 
+|   22  |   -   |   9   |   *   |
+ orb^
