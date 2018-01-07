@@ -75,3 +75,16 @@ take business card
 take strange book
 $setreg R8 25734
 use teleporter
+north
+north
+north
+north
+north
+north
+north
+east
+take journal
+look journal
+west
+north
+north
