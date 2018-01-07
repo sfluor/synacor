@@ -17,7 +17,7 @@ func main() {
 	coinsFlag := flag.Bool("coins", false, "Print the solution for the coin enigma")
 	orbFlag := flag.Bool("orb", false, "Print the solution for the orb enigma")
 	teleporter := flag.Bool("teleporter", false, "Print the solution for the teleporter enigma")
-	file := flag.String("bin", "", "Path to the challenge.bin file")
+	file := flag.String("bin", "", "Path to the challenge.bin file to execute it")
 
 	flag.Parse()
 
@@ -33,7 +33,7 @@ func main() {
 		// Find R7 value
 		fmt.Println("Correct R7 value: ", vm.FindCorrectR7Value())
 
-	} else {
+	} else if *file != "" {
 		// Read file
 		b, err := ioutil.ReadFile(*file)
 		if err != nil {
@@ -50,6 +50,9 @@ func main() {
 
 		// Run
 		vm.Run()
+	} else {
+		fmt.Fprintf(os.Stderr, "Please choose an option:\n")
+		flag.PrintDefaults()
 	}
 
 }
