@@ -22,6 +22,9 @@ func main() {
 	// Find R7 value
 	// fmt.Println("Correct R7 value: ", vm.FindCorrectR7Value())
 
+	// Orb search
+	// orb.Search()
+
 	// Read file
 	b, err := ioutil.ReadFile(os.Args[1])
 	if err != nil {
