@@ -23,7 +23,7 @@ func (vm *VM) debug(cmd string) bool {
 
 	setRegRegex := regexp.MustCompile(`^\$setreg R([1-8]) (0|[1-9][0-9]*)`)
 
-	// Force a non zero value for R7
+	// Force a value for a given register
 	if strings.Contains(cmd, "setreg") {
 		match := setRegRegex.FindStringSubmatch(cmd)
 		// Wrong command
@@ -38,7 +38,7 @@ func (vm *VM) debug(cmd string) bool {
 			return false
 		}
 
-		val, err := strconv.ParseUint(string(match[2]), 10, 16)
+		val, err := strconv.ParseUint(match[2], 10, 16)
 		if err != nil {
 			vm.printError("Wrong value for register\n")
 			return false
