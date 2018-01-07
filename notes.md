@@ -334,7 +334,7 @@ func f() {
         // Set R1' to the resulting R0' of the function on (R0, R1 - 1, R7)
         // Retrieve the old R0 (before applying the function) thanks to the stack
         // Call the function on (R0 - 1, R1', R7)
-        stack.push(0)
+        stack.push(R0)
         R1 = R1 - 1
         f()
         R1 = R0
@@ -427,3 +427,24 @@ Beginning of P0
 ```
 
 We can notice that the entry values for the function are (4, 1 and R7), here R7 is set to 7 thanks to the debugging commands.
+If we try to implement this function it takes a very very long time to complete for (4, 1, xxx).
+
+According to the book we have to:
+
+- Optimize the confirmation algorithm
+- Find the "correct" value for R7
+- Bypass the confirmation mechanism (doing this in our execute function) we should not call 6027 which is done by the instruction 5489
+- Use the teleporter
+
+But we don't know how to check that a given value for R7 is considered by correct by the algorithm.
+
+However, if we assume the confirmation algorithm ends then the next instruction would be the one right after 5489 which issued the call of the confirmation algorithm. 
+The next instructions are:
+```
+(  5491) |   eq: [R1 R0 6]
+(  5495) |   jf: [R1 5579]
+```
+
+We check that R0 value is 6 and if it is we set R1 to 1 which permits us to go to instruction 5579.
+
+So maybe a right value for R7 would be a value that gives R0 = 6 at the end of the confirmation function. However we would need to bruteforce every possible value of R7.
